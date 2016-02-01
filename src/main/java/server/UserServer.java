@@ -1,8 +1,6 @@
 package server;
 
-import entry.Label;
-import entry.Project;
-import entry.User;
+import entry.*;
 import exception.AuthException;
 import redis.clients.jedis.Jedis;
 import spark.Request;
@@ -15,6 +13,8 @@ import javax.validation.ConstraintViolation;
 import javax.validation.Validation;
 import javax.validation.Validator;
 import javax.validation.ValidatorFactory;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
@@ -37,7 +37,7 @@ public class UserServer extends MainServer {
         if (null == user) {
             throw new AuthException("-1");
         }
-        if (!user.getUser_password().equals(user_password)) {
+        if (!user.getUser_password().equals(Md5.MD5_Secure(user_password))) {
             throw new AuthException("-2");
         }
 
@@ -81,6 +81,9 @@ public class UserServer extends MainServer {
             ImageUtils.GenerateImage(user.getUser_head_img(), image_name);
             user.setUser_head_img(image_name);
         }
+
+        //哈希密码
+        user.setUser_password(Md5.MD5_Secure(user.getUser_password()));
 
 
         getUserDao().insert(user);
@@ -267,4 +270,165 @@ public class UserServer extends MainServer {
         return getUserDao().get(id);
     }
 
+    //通过电话获取用户信息
+    public User getUserByPhone(String user_phone) throws AuthException {
+        //判断数据格式是否正确
+        boolean isUserPhone = user_phone.matches("[0-9]{11}");
+        if (!isUserPhone) {
+            throw new AuthException("-1");
+        }
+        //获取用户信息
+        return getUserDao().getByUserPhone(user_phone);
+    }
+
+    //更新用户信息
+    public String updateUserMes(User user) throws AuthException {
+        //判断数据格式是否正确
+        boolean isUserPhone = user.getUser_phone().matches("[0-9]{11}");
+        if (!isUserPhone) {
+            throw new AuthException("-1");
+        }
+        //获取用户信息
+        User user1 = getUserDao().getByUserPhone(user.getUser_phone());
+        if (user1 == null) {
+            return "-1";
+        }
+        //保存用户头像
+        if (!"".equals(user.getUser_head_img()) && user.getUser_head_img() != null) {
+            String image_name = UUID.randomUUID() + ".jpg";
+            ImageUtils.GenerateImage(user.getUser_head_img(), image_name);
+            user1.setUser_head_img(image_name);
+        }
+
+        //更新信息
+        user1.setUser_name(user.getUser_name());
+        if (!"".equals(user.getUser_password()) && user.getUser_password()!=null) {
+            user1.setUser_password(Md5.MD5_Secure(user.getUser_password()));
+        }
+        user1.setUser_age(user.getUser_age());
+        user1.setUser_sex(user.getUser_sex());
+
+        getUserDao().updateUser(user1);
+        return "1";
+    }
+
+    //获取用户关注label信息
+    public List<Label> getLabelsByUserPhone(String user_phone) throws AuthException {
+        //判断数据格式是否正确
+        boolean isUserPhone = user_phone.matches("[0-9]{11}");
+        if (!isUserPhone) {
+            throw new AuthException("-1");
+        }
+        //获取用户信息
+        User user = getUserDao().getByUserPhone(user_phone);
+        if (user == null) {
+            return null;
+        }
+        //获取用户关注label信息
+        String [] labels = null;
+        if (user.getUser_followed_lable_ids() != null && !"".equals(user.getUser_followed_lable_ids())){
+            labels = user.getUser_followed_lable_ids().split("[,]");
+        } else {
+            return null;
+        }
+        List<Label> list = new ArrayList<>();
+        for (String id : labels) {
+            //获取对应的label信息
+            Label label = getLabelDao().get(Integer.parseInt(id));
+            list.add(label);
+        }
+        return list;
+    }
+
+    //获取用户订单信息
+    public List<Order> getOrderByUserPhone(String user_phone) throws AuthException {
+        //判断数据格式是否正确
+        boolean isUserPhone = user_phone.matches("[0-9]{11}");
+        if (!isUserPhone) {
+            throw new AuthException("-1");
+        }
+        //获取用户信息
+        User user = getUserDao().getByUserPhone(user_phone);
+        if (user == null) {
+            return null;
+        }
+        //获取用户关注label信息
+        String [] orders = user.getUser_ordered_ids().split("[,]");
+        List<Order> list = new ArrayList<>();
+        for (String id : orders) {
+            //获取对应的label信息
+            Order order = getOrderDao().get(Integer.parseInt(id));
+            list.add(order);
+        }
+        return list;
+    }
+
+    //获取订单信息
+    public Order getOrderById(String user_phone, String order_id) throws AuthException {
+        //判断数据格式
+        boolean isNum = order_id.matches("[0-9]+");
+        boolean isUserPhone = user_phone.matches("[0-9]{11}");
+        if (!isNum || !isUserPhone) {
+            throw new AuthException("-1");
+        }
+        //转成整形
+        int idn = Integer.parseInt(order_id);
+        //获取订单信息
+        Order order = getOrderDao().get(idn);
+        if (order == null || !order.getOrder_user_phone().equals(user_phone)) {
+            return null;
+        }
+
+        return order;
+    }
+
+    //通过电话获取用户地址
+    public List<Address> getAddressesByUserPhone(String user_phone) throws AuthException {
+        //判断数据格式是否正确
+        boolean isUserPhone = user_phone.matches("[0-9]{11}");
+        if (!isUserPhone) {
+            throw new AuthException("-1");
+        }
+        //获取用户信息
+        User user = getUserDao().getByUserPhone(user_phone);
+        if (user == null) {
+            return null;
+        }
+        //获取地址信息
+        return getAddressDao().getAddressesByUserId(user.getUser_id());
+    }
+
+    //添加地址信息
+    public String insertAddress(Address address, String user_phone) throws AuthException {
+        //判断数据格式是否正确
+        boolean isUserPhone = user_phone.matches("[0-9]{11}");
+        if (!isUserPhone) {
+            throw new AuthException("-1");
+        }
+        //获取用户信息
+        User user = getUserDao().getByUserPhone(user_phone);
+        if (user == null) {
+            return "-1";
+        }
+        address.setAddress_user_id(user.getUser_id());
+        getAddressDao().insertAddress(address);
+        return "1";
+    }
+
+    public List<Info> getInfoByUserPhone(String user_phone) throws AuthException {
+        //判断数据格式是否正确
+        boolean isUserPhone = user_phone.matches("[0-9]{11}");
+        if (!isUserPhone) {
+            throw new AuthException("-1");
+        }
+        //获取用户信息
+        User user = getUserDao().getByUserPhone(user_phone);
+        if (user == null) {
+            return null;
+        }
+        List<Info> list = getInfoDao().getInfoByUserId(user.getUser_id());
+        //info标示为已读
+        getInfoDao().updateInfoStatus(user.getUser_id());
+        return list;
+    }
 }

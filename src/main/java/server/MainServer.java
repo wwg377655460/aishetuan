@@ -1,6 +1,7 @@
 package server;
 
 import dao.*;
+import entry.Address;
 import entry.Banner;
 
 /**
@@ -28,6 +29,15 @@ public class MainServer {
 
     //回复实体数据操作
     private static ReplyDao replyDao;
+
+    //信息实体数据操作
+    private static InfoDao infoDao;
+
+    //订单实体数据操作
+    private static OrderDao orderDao;
+
+    //地址实体数据操作
+    private static AddressDao addressDao;
 
     public static UserDao getUserDao(){
         if(null == userDao){
@@ -76,5 +86,26 @@ public class MainServer {
             replyDao = new ReplyDao();
         }
         return replyDao;
+    }
+
+    public static InfoDao getInfoDao(){
+        if(null == infoDao){
+            infoDao = new InfoDao();
+        }
+        return infoDao;
+    }
+
+    public static OrderDao getOrderDao(){
+        if(null == orderDao){
+            orderDao = new OrderDao();
+        }
+        return orderDao;
+    }
+
+    public static AddressDao getAddressDao(){
+        if(null == addressDao){
+            addressDao = new AddressDao();
+        }
+        return addressDao;
     }
 }

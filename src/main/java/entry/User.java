@@ -38,6 +38,9 @@ public class User {
     private int user_sex;
 
     @Column
+    private int user_age;
+
+    @Column
     private String user_followed_lable_ids;
 
     @Column
@@ -55,11 +58,6 @@ public class User {
     @Column
     private String user_address;
 
-    @Column
-    private int user_info_ids;
-
-    @One(target = Info.class, field = "user_info_ids")
-    private Info info;
 
 
     public int getUser_id() {
@@ -100,6 +98,14 @@ public class User {
 
     public void setUser_password(String user_password) {
         this.user_password = user_password;
+    }
+
+    public int getUser_age() {
+        return user_age;
+    }
+
+    public void setUser_age(int user_age) {
+        this.user_age = user_age;
     }
 
     public String getUser_reg_time() {
@@ -166,19 +172,5 @@ public class User {
         this.user_address = user_address;
     }
 
-    public int getUser_info_ids() {
-        return user_info_ids;
-    }
 
-    public void setUser_info_ids(int user_info_ids) {
-        this.user_info_ids = user_info_ids;
-    }
-
-    public Info getInfo() {
-        return info;
-    }
-
-    public void setInfo(Info info) {
-        this.info = info;
-    }
 }

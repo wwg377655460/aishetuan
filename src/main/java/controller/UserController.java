@@ -31,9 +31,10 @@ public class UserController extends BaseController {
         CommentServer commentServer = new CommentServer();
 
         RedisUtil.initRedis();
+        Logger logger = Logger.getLogger(UserController.class);
 
         get("hello", ((request, response) -> {
-            Logger logger = Logger.getLogger(UserController.class);
+
             // 记录debug级别的信息
             logger.debug("This is debug message.");
             // 记录info级别的信息
@@ -241,7 +242,7 @@ public class UserController extends BaseController {
             String comment_user_phone = getStrOrDie(jsonObject, "comment_user_phone");
             String comment_content = getStrOrDie(jsonObject, "comment_content");
             //判断用户身份
-            boolean authUser = authUserMessage(request,comment_user_phone);
+            boolean authUser = authUserMessage(request, comment_user_phone);
             if (!authUser) {
                 throw new AuthException("-1");
             }
@@ -296,20 +297,209 @@ public class UserController extends BaseController {
 
         }));
 
+        //获取用户信息
+        get("/user/:user_phone", ((request, response) -> {
+            String user_phone = request.params(":user_phone");
+            //判断用户身份
+            boolean authUser = authUserMessage(request, user_phone);
+            if (!authUser) {
+                throw new AuthException("-1");
+            }
+            User user = userServer.getUserByPhone(user_phone);
+            //密码设置为空
+            user.setUser_password("");
+            JSONObject jsonObject = (JSONObject) JSON.toJSON(user);
+            jsonObject.put("status", "1");
+            return jsonObject.toJSONString();
+        }));
+
+        //更改用户信息
+        put("/user/:user_phone", ((request, response) -> {
+            String user_phone = request.params(":user_phone");
+            //判断用户身份
+            boolean authUser = authUserMessage(request, user_phone);
+            if (!authUser) {
+                throw new AuthException("-1");
+            }
+            JSONObject jsonObject = parseJson(request);
+            User user = JSON.parseObject(jsonObject.toString(), User.class);
+            user.setUser_phone(user_phone);
+            String i = userServer.updateUserMes(user);
+            return returnStatusMes(i);
+        }));
+
+        //获取我的关注
+        get("/mylabel/:user_phone", ((request, response) -> {
+            String user_phone = request.params(":user_phone");
+            //判断用户身份
+            boolean authUser = authUserMessage(request, user_phone);
+            if (!authUser) {
+                throw new AuthException("-1");
+            }
+            List<Label> list = userServer.getLabelsByUserPhone(user_phone);
+            //无关注信息或用户不存在
+            if (list == null || list.size() == 0) {
+                return returnStatusMes("-1");
+            }
+            JSONArray jsonArray = new JSONArray();
+            JSONObject jsonObject = new JSONObject();
+            for (Label label : list) {
+                jsonObject.put("lable_id", label.getLable_id());
+                jsonObject.put("lable_name", label.getLable_name());
+                jsonObject.put("lable_img", label.getLable_img());
+                jsonArray.add(jsonObject);
+                jsonArray = JSONArray.parseArray(jsonArray.toString());
+                jsonObject.clear();
+            }
+            jsonObject.put("status", 1);
+            jsonObject.put("data", jsonArray);
+            return jsonObject.toJSONString();
+        }));
+
+        //获取订单列表
+        get("/order/:user_phone", ((request, response) -> {
+            String user_phone = request.params(":user_phone");
+            //判断用户身份
+            boolean authUser = authUserMessage(request, user_phone);
+            if (!authUser) {
+                throw new AuthException("-1");
+            }
+            List<Order> list = userServer.getOrderByUserPhone(user_phone);
+            //无订单信息或用户不存在
+            if (list == null || list.size() == 0) {
+                return returnStatusMes("-1");
+            }
+            JSONArray jsonArray = new JSONArray();
+            JSONObject jsonObject = new JSONObject();
+            for (Order order : list) {
+                jsonObject.put("order_id", order.getOrder_id());
+                jsonObject.put("order_status", order.getOrder_status());
+                jsonObject.put("order_name", order.getOrder_name());
+                jsonObject.put("order_payed_money", order.getOrder_payed_money());
+                jsonObject.put("order_number", order.getOrder_number());
+                jsonArray.add(jsonObject);
+                jsonArray = JSONArray.parseArray(jsonArray.toString());
+                jsonObject.clear();
+            }
+            jsonObject.put("status", 1);
+            jsonObject.put("data", jsonArray);
+            return jsonObject.toJSONString();
+        }));
+
+        //获取订单信息
+        get("/order_message/:order_id/:user_phone", ((request, response) -> {
+            //获取信息
+            String order_id = request.params(":order_id");
+            String user_phone = request.params(":user_phone");
+            //判断用户身份
+            boolean authUser = authUserMessage(request, user_phone);
+            if (!authUser) {
+                throw new AuthException("-1");
+            }
+            Order order = userServer.getOrderById(user_phone, order_id);
+            if (order == null) {
+                return returnStatusMes("-1");
+            }
+            JSONObject jsonObject = (JSONObject) JSON.toJSON(order);
+            jsonObject.put("status", "1");
+            return jsonObject.toJSONString();
+        }));
+
+        //获取用户收货地址
+        get("/user_address/:user_phone", ((request, response) -> {
+            String user_phone = request.params(":user_phone");
+            //判断用户身份
+            boolean authUser = authUserMessage(request, user_phone);
+            if (!authUser) {
+                throw new AuthException("-1");
+            }
+            List<Address> list = userServer.getAddressesByUserPhone(user_phone);
+            JSONArray jsonArray = new JSONArray();
+            JSONObject jsonObject = new JSONObject();
+            for (Address address : list) {
+                jsonObject.put("address_id", address.getAddress_id());
+                jsonObject.put("address", address.getAddress_local());
+                jsonObject.put("phone", address.getAddress_phone());
+                jsonObject.put("name", address.getAddress_name());
+                jsonArray.add(jsonObject);
+                jsonArray = JSONArray.parseArray(jsonArray.toString());
+                jsonObject.clear();
+            }
+            jsonObject.put("status", 1);
+            jsonObject.put("data", jsonArray);
+            return jsonObject.toJSONString();
+        }));
+
+        //添加收货地址
+        put("/user_address/:user_phone", ((request, response) -> {
+            String user_phone = request.params(":user_phone");
+            //判断用户身份
+            boolean authUser = authUserMessage(request, user_phone);
+            if (!authUser) {
+                throw new AuthException("-1");
+            }
+            //获取信息
+            JSONObject jsonObject = parseJson(request);
+            String name = getStrOrDie(jsonObject, "name");
+            String address = getStrOrDie(jsonObject, "address");
+            String phone = getStrOrDie(jsonObject, "phone");
+            Address useraddress = new Address();
+            useraddress.setAddress_local(address);
+            useraddress.setAddress_name(name);
+            useraddress.setAddress_phone(phone);
+            String i = userServer.insertAddress(useraddress, user_phone);
+            return returnStatusMes(i);
+        }));
+
+        //判断是否有新的消息
+        get("/message/:user_phone", ((request, response) -> {
+            String user_phone = request.params(":user_phone");
+            //判断用户身份
+            boolean authUser = authUserMessage(request, user_phone);
+            if (!authUser) {
+                throw new AuthException("-1");
+            }
+            List<Info> list = userServer.getInfoByUserPhone(user_phone);
+            if (list == null || list.size() == 0) {
+                return returnStatusMes("-1");
+            }
+            JSONArray jsonArray = new JSONArray();
+            JSONObject jsonObject = new JSONObject();
+            for (Info info : list) {
+                jsonObject.put("info_type", info.getInfo_type());
+                jsonObject.put("info_comment_id", info.getInfo_comment_id());
+                jsonObject.put("info_project_id", info.getInfo_project_id());
+                jsonObject.put("info_other1", info.getInfo_other1());
+                jsonArray.add(jsonObject);
+                jsonArray = JSONArray.parseArray(jsonArray.toString());
+                jsonObject.clear();
+            }
+            jsonObject.put("status", 1);
+            jsonObject.put("data", jsonArray);
+            return jsonObject.toJSONString();
+        }));
+
+
+
+
 
         exception(AuthException.class, ((e, request, response) -> {
+
             response.status(403);
             response.body(returnStatusMes(e.toString().substring(e.toString().indexOf(":") + 1).trim()));
+            logger.info("AuthException =>>>>>>>>>>" + e);
         }));
 
         exception(NullRequestException.class, ((e, request, response) -> {
             response.status(403);
             response.body(returnStatusMes("-2"));
+            logger.info("NullRequestException =>>>>>>>>>>" + e);
         }));
 
         exception(Exception.class, ((e, request, response) -> {
             response.status(500);
             response.body(returnStatusMes("-1"));
+            logger.info("Exception =>>>>>>>>>>" + e);
         }));
     }
 }

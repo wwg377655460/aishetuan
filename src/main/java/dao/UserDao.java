@@ -62,6 +62,10 @@ public class UserDao extends DbFactory<User> {
             }
         });
 
+    }
 
+    //更新user
+    public void updateUser(User user) {
+        getDao().update(user);
     }
 }

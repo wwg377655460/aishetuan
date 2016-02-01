@@ -1,9 +1,6 @@
 package server;
 
-import entry.Comment;
-import entry.Project;
-import entry.Reply;
-import entry.User;
+import entry.*;
 import exception.AuthException;
 import spark.Request;
 
@@ -60,7 +57,8 @@ public class CommentServer extends MainServer {
         return "1";
     }
 
-    public String rebackCom(Reply reply, String comment_id, String user_phone) throws AuthException {
+    public String
+    rebackCom(Reply reply, String comment_id, String user_phone) throws AuthException {
         //判断数据格式
         //判断comment_id类型
         boolean isNum1 = comment_id.matches("[0-9]+");
@@ -89,6 +87,13 @@ public class CommentServer extends MainServer {
         } else {
             getReplyDao().insert(reply);
         }
+        //更改评论用户信息表
+        Info info = new Info();
+        info.setInfo_comment_id(idn);
+        info.setInfo_status(1);//1表示没有读
+        info.setInfo_type(1);//1表示评论的回复
+        info.setInfo_pub_time(System.currentTimeMillis() + "");
+        getInfoDao().insert(info);
 
         return "1";
     }
